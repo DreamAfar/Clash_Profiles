@@ -1,237 +1,298 @@
 mixed-port: 7890
-allow-lan: true
-bind-address: "*"
-mode: rule
+allow-lan: true  # 允许局域网的连接
+
+bind-address: "*"  # 绑定地址
+
+mode: rule  # 规则模式：Rule（规则） / Global（全局代理）/ Direct（全局直连）
+
+# 设置日志输出级别 (默认级别：silent，即不输出任何内容，以避免因日志内容过大而导致程序内存溢出）。
+# 5 个级别：silent / info / warning / error / debug。级别越高日志输出量越大，越倾向于调试，若需要请自行开启。
+
 log-level: info
+
+# Clash 的 RESTful API
 external-controller: 127.0.0.1:9090
-dns:
-  enable: true
-  ipv6: false
-  listen: :53
-  enhanced-mode: fake-ip
-  default-nameserver:
-    - 223.5.5.5
-    - 119.29.29.29
-  fake-ip-range: 198.18.0.1/16
-  use-hosts: true
-  fake-ip-filter: null
-  nameserver:
-    - https://doh.pub/dns-query
-    - https://dns.alidns.com/dns-query
-  fallback:
-    - https://doh.dns.sb/dns-query
-    - https://dns.cloudflare.com/dns-query
-    - https://dns.twnic.tw/dns-query
-    - tls://8.8.4.4:853
-  fallback-filter:
-    geoip: true
-    ipcidr:
-      - 240.0.0.0/4
-      - 0.0.0.0/32
+
+# dns:
+#   enable: true
+#   ipv6: false
+#   listen: :53
+#   enhanced-mode: fake-ip
+#   default-nameserver:
+#     - 223.5.5.5
+#     - 119.29.29.29
+#   fake-ip-range: 198.18.0.1/16
+#   use-hosts: true
+#   fake-ip-filter: null
+#   nameserver:
+#     - https://doh.pub/dns-query
+#     - https://dns.alidns.com/dns-query
+#   fallback:
+#     - https://doh.dns.sb/dns-query
+#     - https://dns.cloudflare.com/dns-query
+#     - https://dns.twnic.tw/dns-query
+#     - tls://8.8.4.4:853
+#   fallback-filter:
+#     geoip: true
+#     ipcidr:
+#       - 240.0.0.0/4
+#       - 0.0.0.0/32
+
+dns: #闪电的DNS
+    enable: true
+    ipv6: false
+    default-nameserver: [223.5.5.5, 119.29.29.29]
+    enhanced-mode: fake-ip
+    fake-ip-range: 198.18.0.1/16
+    use-hosts: true
+    nameserver: ['https://doh.pub/dns-query', 'https://dns.alidns.com/dns-query']
+    fallback: ['https://doh.dns.sb/dns-query', 'https://dns.cloudflare.com/dns-query', 'https://dns.twnic.tw/dns-query', 'tls://8.8.4.4:853']
+    fallback-filter: { geoip: true, ipcidr: [240.0.0.0/4, 0.0.0.0/32] }
+
 proxy-providers:
-  foo:
-    type: http
-    path: ./profiles/proxies/foo.yaml
-    url: https://update.cdn-sd.xyz/api/v1/client/subscribe?token=qlsGbJxhavZol2cZ&flag=clash
-    interval: 3600
+  # 2、从指定的文件位置加载服务器列表方式
+  Subscribe:
+    type: file
+    path: /profiles/1662077486696.yml
     health-check:
       enable: true
+      interval: 36000
       url: http://www.gstatic.com/generate_204
-      interval: 300
+
 proxy-groups:
   - name: 🚀 节点选择
     type: select
     use:
-      - foo
+      - Subscribe
     proxies:
       - ♻️ 自动选择
       - DIRECT
+
   - name: ♻️ 自动选择
     type: url-test
     url: http://www.gstatic.com/generate_204
     interval: 300
     tolerance: 50
-    use:
-      - foo
+    use:  # 注意，这里是use而不是普通的proxies
+      - Subscribe
+
   - name: 🌍 国外媒体
     type: select
-    use:
-      - foo
+    use:  # 注意，这里是use而不是普通的proxies
+      - Subscribe
     proxies:
       - 🚀 节点选择
       - ♻️ 自动选择
       - 🎯 全球直连
+
   - name: 📲 电报信息
     type: select
-    use:
-      - foo
+    use:  # 注意，这里是use而不是普通的proxies
+      - Subscribe
     proxies:
       - 🚀 节点选择
       - 🎯 全球直连
+
   - name: Ⓜ️ 微软服务
     type: select
     use:
-      - foo
+      - Subscribe
     proxies:
       - 🎯 全球直连
       - 🚀 节点选择
+
   - name: 🍎 苹果服务
     type: select
     use:
-      - foo
+      - Subscribe
     proxies:
       - 🚀 节点选择
       - 🎯 全球直连
+
   - name: 📢 谷歌FCM
     type: select
     use:
-      - foo
+      - Subscribe
     proxies:
       - 🚀 节点选择
       - ♻️ 自动选择
+
   - name: 🎯 全球直连
     type: select
     proxies:
       - DIRECT
       - 🚀 节点选择
       - ♻️ 自动选择
+
   - name: 🛑 全球拦截
     type: select
     proxies:
       - REJECT
       - DIRECT
+
   - name: 🍃 应用净化
     type: select
     proxies:
       - REJECT
       - DIRECT
+
   - name: 🐟 漏网之鱼
     type: select
     use:
-      - foo
+      - Subscribe
     proxies:
       - ♻️ 自动选择
+
   - name: ChatGPT
     type: url-test
     interval: 3600
     url: http://www.gstatic.com/generate_204
     filter: 美国|日本|新加坡
     use:
-      - foo
+      - Subscribe
   - name: 美国
     type: url-test
     interval: 3600
     url: http://www.gstatic.com/generate_204
+    icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/United_States.png
     filter: 美国
     use:
-      - foo
+      - Subscribe
   - name: 日本
     type: url-test
     interval: 3600
     url: http://www.gstatic.com/generate_204
+    icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Japan.png
     filter: 日本
     use:
-      - foo
+      - Subscribe
   - name: 台湾
     type: url-test
     interval: 3600
     url: http://www.gstatic.com/generate_204
+    icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/China.png
     filter: 台湾
     use:
-      - foo
+      - Subscribe
   - name: 新加坡
     type: url-test
     interval: 3600
     url: http://www.gstatic.com/generate_204
+    icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Singapore.png
     filter: 新加坡
     use:
-      - foo
+      - Subscribe
+  - name: 香港
+    type: url-test
+    interval: 3600
+    url: http://www.gstatic.com/generate_204
+    icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Hong_Kong.png
+    filter: 香港
+    use:
+      - Subscribe
+  - name: 韩国
+    type: url-test
+    interval: 3600
+    url: http://www.gstatic.com/generate_204
+    icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Korea.png
+    filter: 韩国
+    use:
+      - Subscribe
+
 rule-providers:
   LocalAreaNetwork:
     behavior: classical
     type: http
     url: https://ghproxy.com/https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Providers/LocalAreaNetwork.yaml
     interval: 86400
-    path: ./ACL4SSR/LocalAreaNetwork.yaml
+    #path: ./ACL4SSR/LocalAreaNetwork.yaml
   UnBan:
     behavior: classical
     type: http
     url: https://ghproxy.com/https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Providers/UnBan.yaml
     interval: 86400
-    path: ./ACL4SSR/UnBan.yaml
+    #path: ./ACL4SSR/UnBan.yaml
   BanAD:
     behavior: classical
     type: http
     url: https://ghproxy.com/https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Providers/BanAD.yaml
     interval: 86400
-    path: ./ACL4SSR/BanAD.yaml
+    #path: ./ACL4SSR/BanAD.yaml
   BanProgramAD:
     behavior: classical
     type: http
     url: https://ghproxy.com/https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Providers/BanProgramAD.yaml
     interval: 86400
-    path: ./ACL4SSR/BanProgramAD.yaml
+    #path: ./ACL4SSR/BanProgramAD.yaml
   GoogleFCM:
     behavior: classical
     type: http
     url: https://ghproxy.com/https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Providers/Ruleset/GoogleFCM.yaml
     interval: 86400
-    path: ./ACL4SSR/GoogleFCM.yaml
+    #path: ./ACL4SSR/GoogleFCM.yaml
   GoogleCN:
     behavior: classical
     type: http
     url: https://ghproxy.com/https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Providers/Ruleset/GoogleCN.yaml
     interval: 86400
-    path: ./ACL4SSR/GoogleCN.yaml
+    #path: ./ACL4SSR/GoogleCN.yaml
   SteamCN:
     behavior: classical
     type: http
     url: https://ghproxy.com/https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Providers/Ruleset/SteamCN.yaml
     interval: 86400
-    path: ./ACL4SSR/SteamCN.yaml
+    #path: ./ACL4SSR/SteamCN.yaml
   Microsoft:
     behavior: classical
     type: http
     url: https://ghproxy.com/https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Providers/Ruleset/Microsoft.yaml
     interval: 86400
-    path: ./ACL4SSR/Microsoft.yaml
+    #path: ./ACL4SSR/Microsoft.yaml
   Apple:
     behavior: classical
     type: http
     url: https://ghproxy.com/https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Providers/Ruleset/Apple.yaml
     interval: 86400
-    path: ./ACL4SSR/Apple.yaml
+    #path: ./ACL4SSR/Apple.yaml
   Telegram:
     behavior: classical
     type: http
     url: https://ghproxy.com/https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Providers/Ruleset/Telegram.yaml
     interval: 86400
-    path: ./ACL4SSR/Telegram.yaml
+    #path: ./ACL4SSR/Telegram.yaml
   ProxyLite:
     behavior: classical
     type: http
     url: https://ghproxy.com/https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Providers/ProxyLite.yaml
     interval: 86400
-    path: ./ACL4SSR/ProxyLite.yaml
+    #path: ./ACL4SSR/ProxyLite.yaml
   ProxyMedia:
     behavior: classical
     type: http
     url: https://ghproxy.com/https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Providers/ProxyMedia.yaml
     interval: 86400
-    path: ./ACL4SSR/ProxyMedia.yaml
+    #path: ./ACL4SSR/ProxyMedia.yaml
   ChinaDomain:
     behavior: classical
     type: http
     url: https://ghproxy.com/https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Providers/ChinaDomain.yaml
     interval: 86400
-    path: ./ACL4SSR/ChinaDomain.yaml
+    #path: ./ACL4SSR/ChinaDomain.yaml
   ChinaCompanyIp:
     behavior: ipcidr
     type: http
     url: https://ghproxy.com/https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Providers/ChinaCompanyIp.yaml
     interval: 86400
-    path: ./ACL4SSR/ChinaCompanyIp.yaml
+    #path: ./ACL4SSR/ChinaCompanyIp.yaml
+  WeChat:
+    behavior: "classical"
+    type: http
+    url: "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/release/rule/Clash/WeChat/WeChat.yaml"
+    interval: 3600
+    path: ./WeChat.yaml
+
 rules:
+# 这些是自定义规则，想要的可以继续加。
   - DOMAIN-SUFFIX,oyunfor.com,🎯 全球直连
   - DOMAIN-SUFFIX,vpos3.isbank.com,🎯 全球直连
   - DOMAIN-SUFFIX,paytr.com,🎯 全球直连
@@ -259,6 +320,9 @@ rules:
   - DOMAIN-SUFFIX,bulianglin.com,♻️ 自动选择
   - DOMAIN-SUFFIX,duolingo.com,ChatGPT
   - DOMAIN-SUFFIX,chat.openai.com,ChatGPT
+
+   # 下面的规则是通过上面的rule-provider来确定的
+  - RULE-SET,WeChat,DIRECT
   - RULE-SET,LocalAreaNetwork,🎯 全球直连
   - RULE-SET,UnBan,🎯 全球直连
   - RULE-SET,BanAD,🛑 全球拦截
